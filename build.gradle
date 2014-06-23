@@ -1,0 +1,14 @@
+allprojects {
+    buildscript {
+        repositories {
+            jcenter()
+        }
+    }
+
+    version = '1.0'
+
+    repositories {
+        jcenter()
+        mavenCentral()
+    }
+}

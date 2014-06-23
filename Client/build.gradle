@@ -1,0 +1,17 @@
+buildscript {
+    dependencies {
+        classpath 'be.filipblondeel.gradle:gradle-gulp-plugin:0.1'
+    }
+}
+
+apply plugin: 'node'
+apply plugin: 'gulp'
+
+version = '1.0'
+
+node {
+    version = '0.10.29'
+    distBaseUrl = 'http://nodejs.org/dist'
+    download = true
+    workDir = file("${project.buildDir}/nodejs")
+}
