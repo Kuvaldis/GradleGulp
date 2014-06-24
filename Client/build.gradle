@@ -1,17 +1,46 @@
+import org.apache.tools.ant.taskdefs.condition.Os
+
 buildscript {
     dependencies {
         classpath 'be.filipblondeel.gradle:gradle-gulp-plugin:0.1'
     }
 }
 
+ext {
+    nodeDir = "${project.projectDir}/node"
+    nodeModulesDir = "${project.projectDir}/node_modules"
+    bowerDir = "${project.projectDir}/vendor"
+}
+
 apply plugin: 'node'
 apply plugin: 'gulp'
 
-version = '1.0'
+version = '0.1'
 
 node {
     version = '0.10.29'
     distBaseUrl = 'http://nodejs.org/dist'
     download = true
-    workDir = file("${project.buildDir}/nodejs")
+    workDir = file(nodeDir)
 }
+
+task clean(type: Delete) {
+    delete nodeModulesDir, bowerDir
+}
+
+gulp_build.dependsOn 'npmInstall'
+gulp_build.dependsOn 'installGulp'
+
+task bower(dependsOn: 'npmInstall', type: Exec) {
+    if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+        commandLine "$nodeModulesDir/.bin/bower.cmd", 'install'
+    } else {
+        commandLine "$nodeModulesDir/.bin/bower", 'install'
+    }
+
+}
+
+task build << {}
+build.dependsOn 'bower'
+build.dependsOn 'gulp_build'
+
