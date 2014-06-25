@@ -24,7 +24,12 @@ node {
     workDir = file(nodeDir)
 }
 
-task clean(type: Delete) {
+task clean << {
+    println 'Clean build and dest'
+}
+clean.dependsOn 'gulp_clean'
+
+task cleanAll(dependsOn: 'clean', type: Delete) {
     delete nodeModulesDir, bowerDir
 }
 
@@ -40,7 +45,14 @@ task bower(dependsOn: 'npmInstall', type: Exec) {
 
 }
 
-task build << {}
+task build << {
+    println 'Run build'
+}
 build.dependsOn 'bower'
 build.dependsOn 'gulp_build'
 
+task dist << {
+    println 'Run dist'
+}
+dist.dependsOn 'bower'
+dist.dependsOn 'gulp_dist'
