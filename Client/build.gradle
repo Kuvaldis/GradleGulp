@@ -24,17 +24,26 @@ node {
     workDir = file(nodeDir)
 }
 
-task clean << {
-    println 'Clean build and dest'
-}
-clean.dependsOn 'gulp_clean'
-
-task cleanAll(dependsOn: 'clean', type: Delete) {
+task cleanNode(type: Delete) {
     delete nodeModulesDir, bowerDir
 }
 
+task clean << {
+    println 'Run clean'
+}
+clean.dependsOn 'gulp_clean'
+clean.dependsOn 'cleanNode'
+
+task gulpClean << {
+    println 'Run gulp clean'
+}
+gulpClean.dependsOn 'gulp_clean'
+
 gulp_build.dependsOn 'npmInstall'
 gulp_build.dependsOn 'installGulp'
+gulp_dist.dependsOn 'npmInstall'
+gulp_dist.dependsOn 'installGulp'
+installGulp.mustRunAfter 'npmInstall'
 
 task bower(dependsOn: 'npmInstall', type: Exec) {
     if (Os.isFamily(Os.FAMILY_WINDOWS)) {
@@ -50,9 +59,11 @@ task build << {
 }
 build.dependsOn 'bower'
 build.dependsOn 'gulp_build'
+gulp_build.mustRunAfter 'bower'
 
 task dist << {
     println 'Run dist'
 }
 dist.dependsOn 'bower'
 dist.dependsOn 'gulp_dist'
+gulp_dist.mustRunAfter 'bower'
