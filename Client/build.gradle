@@ -67,3 +67,8 @@ task dist << {
 dist.dependsOn 'bower'
 dist.dependsOn 'gulp_dist'
 gulp_dist.mustRunAfter 'bower'
+
+task dev << {
+    println 'Run in dev mode'
+}
+dev.dependsOn 'gulp_dev'

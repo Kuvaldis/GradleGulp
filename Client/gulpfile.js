@@ -9,11 +9,15 @@ var gulp = require("gulp"),
     html2js = require("gulp-ng-html2js"),
     htmlInject = require("gulp-inject"),
     ngmin = require("gulp-ngmin"),
-    uglify = require("gulp-uglify");
+    uglify = require("gulp-uglify"),
+    connect = require("connect"),
+    util = require("gulp-util"),
+    livereload = require("gulp-livereload");
 
 var paths = {
     src: {
         base: 'src',
+        files: 'src/**',
         less: {
             files: 'src/less/**/*.less'
         },
@@ -29,6 +33,7 @@ var paths = {
     },
     build: {
         base: 'app',
+        files: 'app/**',
         css: {
             dest: 'app/css',
             files: 'app/css/**/*.css'
@@ -142,3 +147,19 @@ gulp.task("dist:index", ["build:index", "dist:css", "dist:js"], function() {
 });
 
 gulp.task("dist", ["dist:index"]);
+
+gulp.task("server", ["build"], function (next) {
+    var port = 9090;
+    var server = connect();
+    server.use(connect.static(paths.build.base)).listen(port, next);
+    util.log("Server up and running: http://localhost:" + port);
+});
+
+gulp.task("dev", ["server"], function () {
+    gulp.watch(paths.src.files, ["build"]);
+    var lr = livereload();
+    gulp.watch(paths.build.files).on("change", function (file) {
+        lr.changed(file.path);
+    });
+
+});
