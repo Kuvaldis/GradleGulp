@@ -48,6 +48,13 @@ var paths = {
         },
         index: {
             dest: 'app'
+        },
+        vendor: {
+            dest: 'app/vendor',
+            files: {
+                css: 'app/vendor/**/*.css',
+                js: 'app/vendor/**/*.js'
+            }
         }
     },
     dist: {
@@ -108,17 +115,46 @@ gulp.task("build:templates", function () {
         .pipe(dest(paths.build.templates.dest))
 });
 
-gulp.task("build:js", function() {
+gulp.task("build:js", function () {
     return src(paths.src.js.files)
         .pipe(dest(paths.build.js.dest))
 });
 
-gulp.task("build:index", ["build:css", "build:js", "build:templates"], function() {
+var toPathBuild = function (path) {
+    return path.substring(path.indexOf(paths.build.base) + paths.build.base.length)
+};
+
+var toPathBuildCss = function (path) {
+    return '<link rel="stylesheet" href="' + toPathBuild(path) + '">';
+};
+
+var toPathBuildJs = function (path) {
+    return '<script src="' + toPathBuild(path) + '"></script>'
+};
+
+gulp.task("build:vendor", function () {
+    return src([].concat(paths.vendor.css).concat(paths.vendor.js))
+        .pipe(dest(paths.build.vendor.dest))
+});
+
+gulp.task("build:index", ["build:css", "build:js", "build:templates", "build:vendor"], function () {
     return src(paths.src.index.file)
-        .pipe(htmlInject(src(paths.vendor.css, {read: false}), {starttag: '<!-- inject:vendor:css -->'}))
-        .pipe(htmlInject(src(paths.build.css.files, {read: false}), {starttag: '<!-- inject:app:css -->'}))
-        .pipe(htmlInject(src(paths.vendor.js, {read: false}), {starttag: '<!-- inject:vendor:js -->'}))
-        .pipe(htmlInject(src(paths.build.js.files, {read: false}), {starttag: '<!-- inject:app:js -->'}))
+        .pipe(htmlInject(src(paths.build.vendor.files.css, {read: false}), {
+            starttag: '<!-- inject:vendor:css -->',
+            transform: toPathBuildCss
+        }))
+        .pipe(htmlInject(src(paths.build.css.files, {read: false}), {
+            starttag: '<!-- inject:app:css -->',
+            transform: toPathBuildCss
+        }))
+        .pipe(htmlInject(src(paths.build.vendor.files.js, {read: false}), {
+            starttag: '<!-- inject:vendor:js -->',
+            transform: toPathBuildJs
+        }))
+        .pipe(htmlInject(src(paths.build.js.files, {read: false}), {
+            starttag: '<!-- inject:app:js -->',
+            transform: toPathBuildJs
+        }))
         .pipe(dest(paths.build.index.dest))
 });
 
@@ -131,7 +167,7 @@ gulp.task("dist:css", ["build:css"], function () {
         .pipe(dest(paths.dist.css.dest))
 });
 
-gulp.task("dist:js", ["build:js", "build:templates"], function() {
+gulp.task("dist:js", ["build:js", "build:templates"], function () {
     return src([].concat(paths.vendor.js).concat(paths.build.js.files))
         .pipe(concat(paths.dist.js.file))
         .pipe(ngmin())
@@ -139,10 +175,28 @@ gulp.task("dist:js", ["build:js", "build:templates"], function() {
         .pipe(dest(paths.dist.js.dest))
 });
 
-gulp.task("dist:index", ["build:index", "dist:css", "dist:js"], function() {
+var toPathDist = function (path) {
+    return path.substring(path.indexOf(paths.dist.base) + paths.dist.base.length)
+};
+
+var toPathDistCss = function (path) {
+    return '<link rel="stylesheet" href="' + toPathDist(path) + '">';
+};
+
+var toPathDistJs = function (path) {
+    return '<script src="' + toPathDist(path) + '"></script>'
+};
+
+gulp.task("dist:index", ["build:index", "dist:css", "dist:js"], function () {
     return src(paths.src.index.file)
-        .pipe(htmlInject(src(paths.dist.js.files, {read: false}), {starttag: '<!-- inject:app:css -->'}))
-        .pipe(htmlInject(src(paths.dist.css.files, {read: false}), {starttag: '<!-- inject:app:js -->'}))
+        .pipe(htmlInject(src(paths.dist.js.files, {read: false}), {
+            starttag: '<!-- inject:app:css -->',
+            transform: toPathDistCss
+        }))
+        .pipe(htmlInject(src(paths.dist.css.files, {read: false}), {
+            starttag: '<!-- inject:app:js -->',
+            transform: toPathDistJs
+        }))
         .pipe(dest(paths.dist.index.dest))
 });
 
@@ -151,7 +205,13 @@ gulp.task("dist", ["dist:index"]);
 gulp.task("server", ["build"], function (next) {
     var port = 9090;
     var server = connect();
-    server.use(connect.static(paths.build.base)).listen(port, next);
+    server.use(connect.static(paths.build.base))
+        .use(function (req, res) {
+            // todo do someting like nginx try files
+            util.log(req.url);
+            req.url = '/';
+        })
+        .listen(port, next);
     util.log("Server up and running: http://localhost:" + port);
 });
 

@@ -10,6 +10,6 @@ module.config(function ($stateProvider) {
     });
 });
 
-module.controller('AboutController', function ($scope) {
-    $scope.greetings = 'Hi!'
+module.controller('HomeController', function ($scope) {
+    $scope.greetings = 'Hi!!!'
 });
