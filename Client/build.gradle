@@ -71,6 +71,7 @@ gulp_dist.mustRunAfter 'bower'
 task dev << {
     println 'Run in dev mode'
 }
+dev.dependsOn 'bower'
 dev.dependsOn 'gulp_dev'
 dev.dependsOn 'npmInstall'
 dev.dependsOn 'installGulp'

@@ -12,7 +12,8 @@ var gulp = require("gulp"),
     uglify = require("gulp-uglify"),
     connect = require("connect"),
     util = require("gulp-util"),
-    livereload = require("gulp-livereload");
+    livereload = require("gulp-livereload"),
+    fs = require("fs");
 
 var paths = {
     src: {
@@ -40,17 +41,19 @@ var paths = {
         },
         js: {
             dest: 'app/src',
-            files: 'app/**/*.js'
+            files: ['app/src/**/*.js', 'app/templates.js']
         },
         templates: {
             file: 'templates.js',
             dest: 'app'
         },
         index: {
-            dest: 'app'
+            dest: 'app',
+            file: 'app/index.html'
         },
         vendor: {
             dest: 'app/vendor',
+            base: 'vendor',
             files: {
                 css: 'app/vendor/**/*.css',
                 js: 'app/vendor/**/*.js'
@@ -61,12 +64,12 @@ var paths = {
         base: 'dist',
         css: {
             dest: 'dist/css',
-            files: 'dist/**/*.css',
+            files: 'dist/css/**/*.css',
             file: 'app.min.css'
         },
         js: {
             dest: 'dist/js',
-            files: 'dist/**/*.js',
+            files: 'dist/js/**/*.js',
             file: 'app.min.js'
         },
         index: {
@@ -80,7 +83,7 @@ var paths = {
         js: [
             'vendor/jquery/dist/jquery.min.js',
             'vendor/bootstrap/dist/js/bootstrap.min.js',
-            'vendor/angular/angular.min.js',
+            'vendor/angular/angular.js',
             'vendor/angular-bootstrap/ui-bootstrap.min.js',
             'vendor/angular-ui-router/release/angular-ui-router.min.js'
         ]
@@ -120,16 +123,37 @@ gulp.task("build:js", function () {
         .pipe(dest(paths.build.js.dest))
 });
 
-var toPathBuild = function (path) {
+var toPathBuild = function (path, vendor) {
+    if (vendor) {
+        var pathParts = path.split('/');
+        var filename = pathParts[pathParts.length - 1];
+        return '/' + paths.build.vendor.base + '/' + filename
+    }
     return path.substring(path.indexOf(paths.build.base) + paths.build.base.length)
 };
 
-var toPathBuildCss = function (path) {
-    return '<link rel="stylesheet" href="' + toPathBuild(path) + '">';
+var toPathBuildCss = function (path, vendor) {
+    return '<link rel="stylesheet" href="' + toPathBuild(path, vendor) + '">';
 };
 
-var toPathBuildJs = function (path) {
-    return '<script src="' + toPathBuild(path) + '"></script>'
+var toPathBuildCssVendor = function(path) {
+    return toPathBuildCss(path, true)
+};
+
+var toPathBuildCssApp = function(path) {
+    return toPathBuildCss(path, false)
+};
+
+var toPathBuildJs = function (path, vendor) {
+    return '<script src="' + toPathBuild(path, vendor) + '"></script>'
+};
+
+var toPathBuildJsVendor = function(path) {
+    return toPathBuildJs(path, true)
+};
+
+var toPathBuildJsApp = function(path) {
+    return toPathBuildJs(path, false)
 };
 
 gulp.task("build:vendor", function () {
@@ -139,21 +163,21 @@ gulp.task("build:vendor", function () {
 
 gulp.task("build:index", ["build:css", "build:js", "build:templates", "build:vendor"], function () {
     return src(paths.src.index.file)
-        .pipe(htmlInject(src(paths.build.vendor.files.css, {read: false}), {
+        .pipe(htmlInject(src(paths.vendor.css, {read: false}), {
             starttag: '<!-- inject:vendor:css -->',
-            transform: toPathBuildCss
+            transform: toPathBuildCssVendor
         }))
         .pipe(htmlInject(src(paths.build.css.files, {read: false}), {
             starttag: '<!-- inject:app:css -->',
-            transform: toPathBuildCss
+            transform: toPathBuildCssApp
         }))
-        .pipe(htmlInject(src(paths.build.vendor.files.js, {read: false}), {
+        .pipe(htmlInject(src(paths.vendor.js, {read: false}), {
             starttag: '<!-- inject:vendor:js -->',
-            transform: toPathBuildJs
+            transform: toPathBuildJsVendor
         }))
         .pipe(htmlInject(src(paths.build.js.files, {read: false}), {
             starttag: '<!-- inject:app:js -->',
-            transform: toPathBuildJs
+            transform: toPathBuildJsApp
         }))
         .pipe(dest(paths.build.index.dest))
 });
@@ -206,10 +230,11 @@ gulp.task("server", ["build"], function (next) {
     var port = 9090;
     var server = connect();
     server.use(connect.static(paths.build.base))
-        .use(function (req, res) {
-            // todo do someting like nginx try files
-            util.log(req.url);
-            req.url = '/';
+        .use(function(req, res) {
+            if (!/.js|.css/.test(req.url)) {
+                var stream = fs.createReadStream(paths.build.index.file);
+                stream.pipe(res);
+            }
         })
         .listen(port, next);
     util.log("Server up and running: http://localhost:" + port);
