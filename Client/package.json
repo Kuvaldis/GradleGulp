@@ -23,6 +23,8 @@
         "gulp-inject": ">=0.4.1",
         "event-stream": ">=3.1.5",
         "connect": ">=2.21.1",
-        "find-file": ">=0.1.4"
+        "connect-livereload": ">=0.4.0",
+        "tiny-lr": ">=0.0.7",
+        "path": ">=0.4.9"
     }
 }

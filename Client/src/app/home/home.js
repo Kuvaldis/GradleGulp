@@ -11,5 +11,5 @@ module.config(function ($stateProvider) {
 });
 
 module.controller('HomeController', function ($scope) {
-    $scope.greetings = 'Hi!!!'
+    $scope.greetings = 'Hi!'
 });

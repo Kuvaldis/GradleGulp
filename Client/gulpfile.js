@@ -12,8 +12,10 @@ var gulp = require("gulp"),
     uglify = require("gulp-uglify"),
     connect = require("connect"),
     util = require("gulp-util"),
-    livereload = require("gulp-livereload"),
-    fs = require("fs");
+    livereload = require("connect-livereload"),
+    tinylr = require('tiny-lr'),
+    fs = require("fs"),
+    path = require('path');
 
 var paths = {
     src: {
@@ -161,7 +163,9 @@ gulp.task("build:vendor", function () {
         .pipe(dest(paths.build.vendor.dest))
 });
 
-gulp.task("build:index", ["build:css", "build:js", "build:templates", "build:vendor"], function () {
+gulp.task("build:app", ["build:css", "build:js", "build:templates"]);
+
+var buildIndex = function() {
     return src(paths.src.index.file)
         .pipe(htmlInject(src(paths.vendor.css, {read: false}), {
             starttag: '<!-- inject:vendor:css -->',
@@ -180,9 +184,19 @@ gulp.task("build:index", ["build:css", "build:js", "build:templates", "build:ven
             transform: toPathBuildJsApp
         }))
         .pipe(dest(paths.build.index.dest))
+};
+
+gulp.task("build:index", ["build:app", "build:vendor"], function () {
+    return buildIndex();
+});
+
+gulp.task("build:index:dev", ["build:app"], function () {
+    return buildIndex();
 });
 
 gulp.task("build", ["build:index"]);
+
+gulp.task("build:dev", ["build:index:dev"]);
 
 gulp.task("dist:css", ["build:css"], function () {
     return src([].concat(paths.vendor.css).concat(paths.build.css.files))
@@ -226,25 +240,39 @@ gulp.task("dist:index", ["build:index", "dist:css", "dist:js"], function () {
 
 gulp.task("dist", ["dist:index"]);
 
-gulp.task("server", ["build"], function (next) {
-    var port = 9090;
+var startServer = function() {
+    var port = 4000;
     var server = connect();
-    server.use(connect.static(paths.build.base))
+    server.use(livereload({port: 4002}))
+        .use(connect.static(paths.build.base))
         .use(function(req, res) {
             if (!/.js|.css/.test(req.url)) {
                 var stream = fs.createReadStream(paths.build.index.file);
                 stream.pipe(res);
             }
         })
-        .listen(port, next);
+        .listen(port);
     util.log("Server up and running: http://localhost:" + port);
-});
+};
 
-gulp.task("dev", ["server"], function () {
-    gulp.watch(paths.src.files, ["build"]);
-    var lr = livereload();
-    gulp.watch(paths.build.files).on("change", function (file) {
-        lr.changed(file.path);
+var lr;
+var startLiveReload = function () {
+    lr = tinylr();
+    lr.listen(4002);
+};
+
+function notifyLiveReload(event) {
+    var fileName = path.relative(paths.build.base, event.path);
+    lr.changed({
+        body: {
+            files: [fileName]
+        }
     });
+}
 
+gulp.task("dev", ["build"], function () {
+    startServer();
+    startLiveReload();
+    gulp.watch(paths.build.files, notifyLiveReload);
+    gulp.watch(paths.src.files, ["build:dev"]);
 });
